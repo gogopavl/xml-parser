@@ -88,8 +88,8 @@ public class XMLParser {
     }
 
     public void writeToCsv() {
-        log.info("Writing to segments.csv");
-        try (PrintWriter printWriter = new PrintWriter(new File("segments.csv"))) {
+        log.info("Writing to segments.tsv");
+        try (PrintWriter printWriter = new PrintWriter(new File("segments.tsv"))) {
             segments.stream()
                     .map(SegmentDto::toTsv)
                     .forEach(printWriter::println);
