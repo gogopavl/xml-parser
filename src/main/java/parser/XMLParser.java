@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.text.MessageFormat.format;
+import static java.util.Objects.nonNull;
 import static org.apache.commons.io.FilenameUtils.getExtension;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
 import static validator.FileValidator.XML_EXTENSION;
@@ -79,12 +80,17 @@ public class XMLParser {
     private void appendElements(Document document) {
         NodeList nodes = document.getElementsByTagName("segment");
         for (int i = 0; i < nodes.getLength(); i++) {
-            Node node = nodes.item(i);
-            String nodeValue = node.getFirstChild().getNodeValue().trim();
+            Node currentNode = nodes.item(i);
+            String nodeValue = getNodeValue(currentNode);
             if (isNotEmpty(nodeValue) && this.articles.contains(nodeValue)) {
-                segments.add(SegmentDto.fromNode(node));
+                segments.add(SegmentDto.fromNode(currentNode));
             }
         }
+    }
+
+    private String getNodeValue(Node node) {
+        return nonNull(node.getFirstChild()) && nonNull(node.getFirstChild().getNodeValue()) ?
+                node.getFirstChild().getNodeValue().trim() : null;
     }
 
     public void writeToCsv() {
@@ -93,6 +99,7 @@ public class XMLParser {
             segments.stream()
                     .map(SegmentDto::toTsv)
                     .forEach(printWriter::println);
+            printWriter.close();
         } catch (FileNotFoundException exception) {
             log.severe(exception.getMessage());
             throw new XMLParserException(exception.getMessage());
