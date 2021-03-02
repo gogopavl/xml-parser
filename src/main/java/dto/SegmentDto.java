@@ -14,6 +14,8 @@ import static java.text.MessageFormat.format;
 @NoArgsConstructor
 public class SegmentDto {
 
+    private String filename;
+
     private Integer id;
 
     private String feature;
@@ -31,6 +33,6 @@ public class SegmentDto {
     }
 
     public String toTsv() {
-        return format("{0}\t{1}\t{2}\t{3}", this.id, this.feature, this.state, this.value);
+        return format("{0}\t{1}\t{2}\t{3}\t{4}", this.filename, this.id, this.feature, this.state, this.value);
     }
 }

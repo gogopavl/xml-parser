@@ -70,20 +70,22 @@ public class XMLParser {
         validateXmlFile(file);
         try {
             Document document = XMLUtils.getDocumentFromXmlFile(file);
-            appendElements(document);
+            appendElements(file, document);
         } catch (ParserConfigurationException | IOException | SAXException exception) {
             log.severe(exception.getMessage());
             throw new XMLParserException(exception.getMessage());
         }
     }
 
-    private void appendElements(Document document) {
+    private void appendElements(File file, Document document) {
         NodeList nodes = document.getElementsByTagName("segment");
         for (int i = 0; i < nodes.getLength(); i++) {
             Node currentNode = nodes.item(i);
             String nodeValue = getNodeValue(currentNode);
             if (isNotEmpty(nodeValue) && this.articles.contains(nodeValue)) {
-                segments.add(SegmentDto.fromNode(currentNode));
+                SegmentDto segmentDto = SegmentDto.fromNode(currentNode);
+                segmentDto.setFilename(file.getName());
+                segments.add(segmentDto);
             }
         }
     }
