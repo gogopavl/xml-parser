@@ -1,77 +1,139 @@
 ---
-title: "mg-ass"
-author: "mg"
-date: "30/03/2021"
+title: "Ανάλυση Δεδομένων ΕΣΚΕΙΜΑΘ ως προς την Συμφωνία Άρθρου - Ονόματος"
+author: "Μαριαλένα Γκογκίδη"
+date: "07/04/2021"
 output:
   html_document: default
   pdf_document: default
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+# Βιβλιοθήκες
 
-## Dependencies
-
-```{r}
+```{r, message=FALSE}
 # install.packages("dplyr")
 library(dplyr)
 ```
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-## Importing meta data
+# Φόρτωση Δεδομένων
+## Μεταδεδομένα ΕΣΚΕΙΜΑΘ
 
 ```{r}
-segments.metadata <- read.csv("~/Documents/prototyping/xml-parser/files/GLC_meta.csv", header=TRUE)
-knitr::kable(segments.metadata[0:5, ], caption = "Table with kable")
+segments.metadata <- read.csv("GLC_meta.csv", header=TRUE)
+knitr::kable(segments.metadata[0:5, ], caption = "Ενδεικτικά Μεταδεδομένα ΕΣΚΕΙΜΑΘ")
+```
+## Φόρτωση δεδομένων σωστών χρήσεων
+
+```{r}
+segments.correct <- read.delim("segments-correct.tsv", header=TRUE)
 ```
 
-## Importing correct segments
+## Φόρτωση δεδομένων λανθασμένων χρήσεων
 
 ```{r}
-segments.correct <- read.delim("~/Documents/prototyping/xml-parser/files/segments-correct.tsv", header=TRUE)
+segments.errors <- read.delim("segments-errors.tsv", header=TRUE)
 ```
 
-## Importing segments with errors
+# Διασταύρωση Δεδομένων
+## Διασταύρωση σωστών χρήσεων με τα μεταδεδομένα
 
 ```{r}
-segments.errors <- read.delim("~/Documents/prototyping/xml-parser/files/segments-errors.tsv", header=TRUE)
-# knitr::kable(segments.errors[0:5, ], caption = "Table with kable")
-```
-
-## Joining correct
-
-```{r}
+# η στήλη ID των metadata έχει κενά πριν τις τιμές, οπότε εδώ τα αφαιρούμε, προκειμένου να γίνει σωστά το join
 segments.metadata$ID <- trimws(segments.metadata$ID, which = c("both"))
 joined.seg.dplyr  <- inner_join(segments.metadata, segments.correct, by = "ID")
 
 joined.correct <- merge(segments.metadata, segments.correct, by="ID")
 
-knitr::kable(joined.correct[0:5, ], caption = "Table with kable")
+knitr::kable(joined.correct[0:5, ], caption = "Ενδεικτικές εγγραφές από την διασταύρωση των σωστών χρήσεων με τα μετοδεδομένα")
 ```
 
-## Joining errors
+## Διασταύρωση λανθασμένων χρήσεων με τα μεταδεδομένα
 
 ```{r}
 joined.errors <- merge(segments.metadata, segments.errors, by="ID")
 
-knitr::kable(joined.errors[0:5, ], caption = "Table with kable")
+knitr::kable(joined.errors[0:5, ], caption = "Ενδεικτικές εγγραφές από την διασταύρωση των λανθασμένων χρήσεων με τα μετοδεδομένα")
+```
+
+# Ανάλυση Δεδομένων
+
+## Ερωτήματα
+
+1) Οι ομιλητές ποιας μητρικής γλώσσας εμφανίζουν μεγαλύτερο ποσοστό επιτυχίας στη συμφωνία άρθρου - ονόματος;
+
+```{r}
+all.together <- rbind(joined.correct, joined.errors)
+
+totals.by.language <- all.together %>% count(L1, name = "Total")
+correct.freq.by.language <- joined.correct %>% count(L1, name="NumberOfCorrect")
+joined.totals.by.language <- merge(totals.by.language, correct.freq.by.language, by = "L1")
+
+joined.totals.by.language$Percentage = (joined.totals.by.language$NumberOfCorrect / joined.totals.by.language$Total)*100
+
+joined.totals.by.language$L1 <- trimws(joined.totals.by.language$L1, which = c("both"))
 ```
 
 
-```{r cars}
-summary(cars)
+
+```{r}
+joined.totals.by.language.ordered.desc <- joined.totals.by.language[order(joined.totals.by.language$Percentage, decreasing=TRUE), ][0:5, ]
+
+barplot(joined.totals.by.language.ordered.desc$Percentage, main="Ποσοστά επιτυχίας ανά μητρική γλώσσα (5 καλύτερες επιδόσεις)",
+   xlab="Μητρική γλώσσα", ylab="Ποσοστό επιτυχίας", names.arg = joined.totals.by.language.ordered.desc$L1)
+
 ```
 
-## Including Plots
+2) Οι ομιλητές ποιάς μητρικής γλώσσας εμφανίζουν το μικρότερο ποσοστό επιτυχίας στην συμφωνία άρθρου;
 
-You can also embed plots, for example:
+```{r}
+joined.totals.by.language.ordered.asc <- joined.totals.by.language[order(joined.totals.by.language$Percentage, decreasing=FALSE), ][0:5, ]
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+barplot(joined.totals.by.language.ordered.asc$Percentage, main="Ποσοστά επιτυχίας ανά μητρική γλώσσα (5 χειρότερες)",
+   xlab="Μητρική γλώσσα",ylab="Ποσοστό επιτυχίας", names.arg = joined.totals.by.language.ordered.asc$L1)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+3) Σε ποια άρθρα επιτυγχάνεται σε μεγαλύτερο βαθμό συμφωνία;
+
+```{r}
+totals.by.article <- all.together %>% count(ARTICLE, name = "ArticleTotal")
+correct.freq.by.article <- joined.correct %>% count(ARTICLE, name="NumberOfCorrectArticles")
+joined.totals.by.article <- merge(totals.by.article, correct.freq.by.article, by = "ARTICLE")
+
+joined.totals.by.article$Percentage = (joined.totals.by.article$NumberOfCorrectArticles / joined.totals.by.article$ArticleTotal)*100
+
+joined.totals.by.article$ARTICLE <- trimws(joined.totals.by.article$ARTICLE, which = c("both"))
+
+joined.totals.by.article.ordered.desc <- joined.totals.by.article[order(joined.totals.by.article$Percentage, decreasing=TRUE), ][0:10, ]
+
+barplot(joined.totals.by.article.ordered.desc$Percentage, main="Ποσοστά επιτυχίας ανά άρθρο (10 πιο σωστές χρήσεις)",
+   xlab="Άρθρο", ylab="Ποσοστό επιτυχίας", names.arg = joined.totals.by.article.ordered.desc$ARTICLE)
+
+```
+
+
+4) Σε ποια άρθρα επιτυγχάνεται σε μικρότερο βαθμό η συμφωνία;
+
+```{r}
+joined.totals.by.article.ordered.asc <- joined.totals.by.article[order(joined.totals.by.article$Percentage, decreasing=FALSE), ][0:10, ]
+
+barplot(joined.totals.by.article.ordered.asc$Percentage, main="Ποσοστά επιτυχίας ανά άρθρο (10 πιο λανθασμένες χρήσεις)",
+   xlab="Άρθρο", ylab = "Ποσοστό επιτυχίας", names.arg = joined.totals.by.article.ordered.asc$ARTICLE)
+```
+
+5) Οι ομιλητές ποιου επιπέδου γλωσσομάθειας εμφανίζουν το μεγαλύτερο ποσοστό επιτυχίας στην συμφωνία άρθρου - ονόματος;
+
+```{r}
+totals.by.skill <- all.together %>% count(GR_Communication_skill, name = "SkillTotal")
+correct.freq.by.skill <- joined.correct %>% count(GR_Communication_skill, name="NumberOfCorrectBySkill")
+joined.totals.by.skill <- merge(totals.by.skill, correct.freq.by.skill, by = "GR_Communication_skill")
+
+joined.totals.by.skill$Percentage = (joined.totals.by.skill$NumberOfCorrectBySkill / joined.totals.by.skill$SkillTotal)*100
+
+joined.totals.by.skill$GR_Communication_skill <- trimws(joined.totals.by.skill$GR_Communication_skill, which = c("both"))
+# todo: filter out NA & Allh
+
+joined.totals.by.skill.ordered.desc <- joined.totals.by.skill[order(joined.totals.by.skill$Percentage, decreasing=TRUE), ]
+
+plot(Percentage~factor(GR_Communication_skill), joined.totals.by.skill.ordered.desc, las=2, xlab="Επίπεδο γλωσσομάθειας", ylab="Ποσοστό επιτυχίας", main="Ποσοστά επιτυχίας ανά επίπεδο γλωσσομάθειας")
+```
