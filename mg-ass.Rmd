@@ -3,8 +3,8 @@ title: "Ανάλυση Δεδομένων ΕΣΚΕΙΜΑΘ ως προς την 
 author: "Μαριαλένα Γκογκίδη"
 date: "07/04/2021"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 
 # Βιβλιοθήκες
